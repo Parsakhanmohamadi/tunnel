@@ -1,10 +1,10 @@
-# آدرس سرور تونل (خارج)
+# Tunnel server address (abroad)
 server_addr: "your-server-domain-or-ip:8443"
 
-# در صورت استفاده از گواهی self-signed، مسیر CA را اینجا بده
-# اگر خالی بماند از CAهای سیستم استفاده می‌شود.
+# Optional CA certificate path for server (for self-signed certs).
+# If empty, system CAs will be used.
 ca_cert_file: "/etc/customtunnel/ca.crt"
 
-# آدرس UDP WireGuard روی سرور ایران
+# UDP address of WireGuard on this (Iran) server
 wireguard_local: "127.0.0.1:51820"
 

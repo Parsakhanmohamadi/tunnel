@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # Simple one-shot installer similar to paqet-tunnel's deploy script.
-# Usage (روی هر سرور جداگانه):
+# Usage (run on each server separately):
 #   curl -fsSL https://raw.githubusercontent.com/Parsakhanmohamadi/tunnel/main/deploy.sh -o deploy.sh
 #   chmod +x deploy.sh
 #   sudo ./deploy.sh
@@ -14,27 +14,27 @@ CONFIG_DIR="/etc/customtunnel"
 echo "=== Tunnel deploy ==="
 
 if [[ $EUID -ne 0 ]]; then
-  echo "[!] لطفاً اسکریپت را با sudo اجرا کنید (sudo ./deploy.sh)"
+  echo "[!] Please run this script as root (sudo ./deploy.sh)"
   exit 1
 fi
 
-read -rp "نقش این سرور چیست؟ (server/client): " ROLE
+read -rp "Server role? (server/client): " ROLE
 ROLE=${ROLE,,}
 if [[ "$ROLE" != "server" && "$ROLE" != "client" ]]; then
-  echo "[!] نقش نامعتبر. فقط server یا client مجاز است."
+  echo "[!] Invalid role. Only 'server' or 'client' is allowed."
   exit 1
 fi
 
-echo "[*] نصب پیش‌نیازها (git, golang)..."
+echo "[*] Installing prerequisites (git, golang)..."
 if command -v apt-get >/dev/null 2>&1; then
   apt-get update -y
   apt-get install -y git golang
 else
-  echo "[!] فقط سیستم‌های مبتنی بر apt (Debian/Ubuntu) به‌صورت خودکار پشتیبانی شده‌اند."
-  echo "    خودت git و golang را نصب کن و دوباره اسکریپت را اجرا کن."
+  echo "[!] Only apt-based systems (Debian/Ubuntu) are automatically supported."
+  echo "    Please install git and golang manually, then re-run this script."
 fi
 
-echo "[*] کلون/آپدیت ریپو در ${INSTALL_DIR} ..."
+echo "[*] Cloning/updating repo at ${INSTALL_DIR} ..."
 if [[ -d "${INSTALL_DIR}/.git" ]]; then
   git -C "${INSTALL_DIR}" pull --ff-only
 else
@@ -47,21 +47,21 @@ cd "${INSTALL_DIR}"
 mkdir -p "${CONFIG_DIR}"
 
 if [[ "$ROLE" == "server" ]]; then
-  echo "[*] تنظیم سرور تونل (abroad/server)..."
+  echo "[*] Configuring tunnel server (abroad/server)..."
 
-  read -rp "پورت شنود TLS (مثلاً 8443، پیش‌فرض 8443): " LISTEN_PORT
+  read -rp "TLS listen port (e.g. 8443, default 8443): " LISTEN_PORT
   LISTEN_PORT=${LISTEN_PORT:-8443}
 
-  read -rp "آدرس UDP WireGuard روی این سرور (پیش‌فرض 127.0.0.1:51820): " WG_REMOTE
+  read -rp "WireGuard UDP address on this server (default 127.0.0.1:51820): " WG_REMOTE
   WG_REMOTE=${WG_REMOTE:-127.0.0.1:51820}
 
   CERT_FILE="${CONFIG_DIR}/server.crt"
   KEY_FILE="${CONFIG_DIR}/server.key"
 
   if [[ -f "${CERT_FILE}" && -f "${KEY_FILE}" ]]; then
-    echo "[*] گواهی TLS موجود پیدا شد (${CERT_FILE}, ${KEY_FILE}) – از همان استفاده می‌کنیم."
+    echo "[*] Existing TLS cert/key found (${CERT_FILE}, ${KEY_FILE}) – reusing them."
   else
-    echo "[*] ساخت گواهی self-signed برای تست..."
+    echo "[*] Generating self-signed TLS certificate for testing..."
     openssl req -x509 -newkey rsa:2048 -nodes -keyout "${KEY_FILE}" -out "${CERT_FILE}" -days 365 \
       -subj "/CN=tunnel-server"
   fi
@@ -75,36 +75,36 @@ tls_key_file: "${KEY_FILE}"
 wireguard_remote: "${WG_REMOTE}"
 EOF
 
-  echo "[*] build باینری سرور..."
+  echo "[*] Building server binary..."
   GOOS=linux GOARCH=amd64 go build -o tunnel-server ./cmd/server
 
-  echo "[*] اجرای نصب server..."
+  echo "[*] Running server install script..."
   chmod +x scripts/install-server.sh
   ./scripts/install-server.sh
 
-  echo "[*] سرور تونل نصب شد. وضعیت:"
+  echo "[*] Tunnel server installed. Status:"
   systemctl status tunnel-server.service --no-pager || true
 
 else
-  echo "[*] تنظیم کلاینت تونل (Iran/client)..."
+  echo "[*] Configuring tunnel client (Iran/client)..."
 
-  read -rp "آدرس سرور تونل (مثلاً your-domain.com:8443): " SERVER_ADDR
+  read -rp "Tunnel server address (e.g. your-domain.com:8443): " SERVER_ADDR
   if [[ -z "${SERVER_ADDR}" ]]; then
-    echo "[!] server_addr نمی‌تواند خالی باشد."
+    echo "[!] server_addr cannot be empty."
     exit 1
   fi
 
-  read -rp "آدرس UDP WireGuard روی این سرور (پیش‌فرض 127.0.0.1:51820): " WG_LOCAL
+  read -rp "WireGuard UDP address on this server (default 127.0.0.1:51820): " WG_LOCAL
   WG_LOCAL=${WG_LOCAL:-127.0.0.1:51820}
 
   CA_FILE_DEFAULT="${CONFIG_DIR}/ca.crt"
-  read -rp "مسیر CA cert برای سرور (خالی برای استفاده از CA سیستم، پیش‌فرض ${CA_FILE_DEFAULT} اگر وجود داشته باشد): " CA_FILE
+  read -rp "CA cert path for server (empty to use system CAs, default ${CA_FILE_DEFAULT} if it exists): " CA_FILE
   if [[ -z "${CA_FILE}" && -f "${CA_FILE_DEFAULT}" ]]; then
     CA_FILE="${CA_FILE_DEFAULT}"
   fi
 
   if [[ -n "${CA_FILE}" && ! -f "${CA_FILE}" ]]; then
-    echo "[!] فایل CA ${CA_FILE} پیدا نشد؛ از CA سیستم استفاده می‌شود."
+    echo "[!] CA file ${CA_FILE} not found; falling back to system CAs."
     CA_FILE=""
   fi
 
@@ -114,18 +114,18 @@ ca_cert_file: "${CA_FILE}"
 wireguard_local: "${WG_LOCAL}"
 EOF
 
-  echo "[*] build باینری کلاینت..."
+  echo "[*] Building client binary..."
   GOOS=linux GOARCH=amd64 go build -o tunnel-client ./cmd/client
 
-  echo "[*] اجرای نصب client..."
+  echo "[*] Running client install script..."
   chmod +x scripts/install-client.sh
   ./scripts/install-client.sh
 
-  echo "[*] کلاینت تونل نصب شد. وضعیت:"
+  echo "[*] Tunnel client installed. Status:"
   systemctl status tunnel-client.service --no-pager || true
 fi
 
-echo "=== تمام شد. برای مشاهده لاگ‌ها:"
+echo "=== Done. To view logs:"
 if [[ "$ROLE" == "server" ]]; then
   echo "  journalctl -u tunnel-server.service -f"
 else

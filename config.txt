@@ -1,0 +1,3 @@
+curl -fsSL https://raw.githubusercontent.com/Parsakhanmohamadi/tunnel/main/deploy.sh -o deploy.sh
+chmod +x deploy.sh
+sudo ./deploy.sh
