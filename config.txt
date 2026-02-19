@@ -1,3 +1,23 @@
 curl -fsSL https://raw.githubusercontent.com/Parsakhanmohamadi/tunnel/main/deploy.sh -o deploy.sh
 chmod +x deploy.sh
 sudo ./deploy.sh
+
+cd /opt/tunnel
+go get customtunnel/internal/tunnel
+
+
+sudo systemctl stop tunnel-server.service 2>/dev/null || true
+sudo systemctl stop tunnel-client.service 2>/dev/null || true
+sudo systemctl disable tunnel-server.service 2>/dev/null || true
+sudo systemctl disable tunnel-client.service 2>/dev/null || true
+
+sudo rm -f /usr/local/bin/tunnel-server /usr/local/bin/tunnel-client
+sudo rm -rf /etc/customtunnel
+sudo rm -f /etc/systemd/system/tunnel-server.service /etc/systemd/system/tunnel-client.service
+sudo systemctl daemon-reload
+
+sudo rm -rf /opt/tunnel
+
+
+
+nano /etc/wireguard/wg0.conf
