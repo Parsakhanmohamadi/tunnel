@@ -1,0 +1,9 @@
+listen_addr: ":8443"
+
+# مسیر گواهی و کلید TLS روی سرور خارج
+tls_cert_file: "/etc/customtunnel/server.crt"
+tls_key_file: "/etc/customtunnel/server.key"
+
+# آدرس UDP اینترفیس WireGuard روی سرور خارج
+wireguard_remote: "127.0.0.1:51820"
+
